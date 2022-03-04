@@ -52,7 +52,7 @@ def train(X, y, k=100):
     return d2_candidates, np.stack(estimates)
 
 
-def plot_regularization_path(d2, estimates, save=False):
+def plot_regularization_path(d2, estimates):
     """
     Plot the regularization path for each feature as we vary the regularization strength delta.
     """
@@ -66,8 +66,7 @@ def plot_regularization_path(d2, estimates, save=False):
     labels = np.loadtxt(data_file, max_rows=1, dtype=str)
     ax.legend(labels)
     ax.grid(True, linestyle='dashed')
-    plt.show() if not save \
-        else plt.savefig(f'reg_path_{datetime.now().strftime("%y-%m-%d-%H-%M")}.png')
+    plt.show()
 
 
 def compute_error(X_train, y_train, X_test, y_test, X_bar, X_std, y_bar):
