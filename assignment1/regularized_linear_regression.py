@@ -7,11 +7,24 @@ from datetime import datetime
 """
 Regularized ridge regression.
 
+Run the two unit tests to generate figures requested by the assignment question. 
 """
 data_file = 'prostate.data'
 
 
 def load_data(train_size=50):
+    """
+    Load training data.
+
+    Args:
+        - train_size: size of training data
+
+    Returns:
+        - X_train: training input. shape=(train_size, n) where n is number of features.
+        - y_train: training targets. shape=(train_size,)
+        - X_test: test input. shape=(M - train_size, n) where M is total size of data.
+        - y_test: test targets. shape=(M - train_size,)
+    """
     X = np.loadtxt(data_file, skiprows=1)  # the first row contains feature labels.
     y = X[:, -1]
     X = X[:, :-1]  # each row is a data point.
@@ -42,6 +55,8 @@ def ridge(X, y, d2):
 def train(X, y, k=100):
     """Compute the optimal theta for various regularization strength delta.
     Args:
+        - X: input data. X.shape= (m, n).
+        - y: target. y.shape=(m,)
         - k: number of delta to try
     Returns:
         - d2_candidates: delta tried. d2_candidates.shape=(k,)
@@ -52,9 +67,34 @@ def train(X, y, k=100):
     return d2_candidates, np.stack(estimates)
 
 
+def predict(X, y, y_bar, theta):
+    """
+    Predict target value, and returns the prediction error.
+
+    Assume m is the number of input data points, n is the number of features,
+    and k is the number of estimated models using different hyperparameter, i.e, the regularization strength.
+
+    Args:
+        - X: input data. shape=(m, n)
+        - y: true target. shape=(m,)
+        - y_bar: mean of training targets.
+        - theta: estimated model parameters. shape=(k, n)
+
+    Returns:
+         - prediction error. shape=(k,)
+    """
+    predict = theta @ X.T + y_bar  # shape=(k, m)
+    error = np.linalg.norm(predict - y, axis=1) / np.linalg.norm(y)
+    return error
+
+
 def plot_regularization_path(d2, estimates):
     """
     Plot the regularization path for each feature as we vary the regularization strength delta.
+
+    Args:
+        - d2: an array of regularization delta tried. shape=(k, )
+        - estimates: best model parameters estimated. shape=(k, n) where n is number of features.
     """
     _, ax = plt.subplots()
     n = estimates.shape[1]
@@ -69,45 +109,38 @@ def plot_regularization_path(d2, estimates):
     plt.show()
 
 
-def compute_error(X_train, y_train, X_test, y_test, X_bar, X_std, y_bar):
-    """Compute prediction error and train error.
+def plot_error(d2, train_error, test_error):
     """
-    d2, estimates = train(1000)
-    estimates = estimates[..., np.newaxis]  # estimates.shape=(k, d, 1)
-    y_hat = y_bar + np.dot((X_test - X_bar) / X_std, estimates).squeeze()  # shape=(n, k) where n=#test, k=#theta
-    y_train_hat = y_bar + np.dot(X_train, estimates).squeeze()  # shape=(m, k) where m=#train, k=#theta
-    y1 = y_test[:, np.newaxis]
-    t_error = np.linalg.norm(y1 - y_hat, axis=0) / np.linalg.norm(y1, axis=0)
-    y2 = y_train[:, np.newaxis]
-    train_error = np.linalg.norm(y2 - y_train_hat, axis=0) / np.linalg.norm(y2, axis=0)
-    return d2, t_error, train_error
+    Plot the relative prediction error.
 
-
-def plot_error(d2, t_error, train_error, save=False):
-    best = d2[np.argmin(t_error)]  # delta with lowest test error.
+    Args:
+        - d2: an array of regularization delta tried. shape=(k, )
+        - train_error: shape=(k,)
+        - test_error: shape=(k,)
+    """
+    best = d2[np.argmin(test_error)]  # delta with the lowest test error.
     _, ax = plt.subplots()
-    ax.plot(d2, t_error, color='green', label='test')
-    ax.plot(best, np.min(t_error), 'g^')
-    ax.plot(d2, train_error, color='blue', label='train')
+    ax.plot(10 ** d2, train_error, color='blue', label='train')
+    ax.plot(10 ** d2, test_error, color='green', label='test')
+    ax.plot(best, np.min(test_error), 'g^')
     ax.set_xscale('log')
-    ax.set_xlabel(f'δ^2. best={best:.4f}')
-    ax.set_ylabel('||y - Xθ||/||y||')
+    ax.set_xlabel(f'$δ^2$ best={best:.4f}')
+    ax.set_ylabel('$||y - Xθ|_2|/||y||_2$')
     ax.grid(True, linestyle='dashed')
     ax.legend()
-    plt.show() if not save \
-        else plt.savefig(f'relative_error_{datetime.now().strftime("%y-%m-%d-%H-%M")}.png')
+    plt.show()
 
 
 class RegularizedLinearRegressionTest(unittest.TestCase):
 
     def setUp(self):
-        self.load_data()
-        self.normalize()
+        self._load_data()
+        self._normalize()
 
-    def load_data(self, train_size=50):
+    def _load_data(self, train_size=50):
         self.X_train, self.y_train, self.X_test, self.y_test = load_data(train_size)
 
-    def normalize(self):
+    def _normalize(self):
         self.X_bar = np.mean(self.X_train, axis=0)
         self.X_std = np.std(self.X_train, axis=0)
         self.y_bar = np.mean(self.y_train)  # y_bar subsumes theta_o
@@ -119,5 +152,8 @@ class RegularizedLinearRegressionTest(unittest.TestCase):
         plot_regularization_path(d2, estimates)
 
     def test_plot_error(self):
-        d2, t_error, train_error = compute_error()
-        plot_error(d2, t_error, train_error)
+        d2, estimates = train(self.X_train, self.y_train - self.y_bar)
+        train_error = predict(self.X_train, self.y_train, self.y_bar, estimates)
+        X_test = (self.X_test - self.X_bar) / self.X_std  # normalize test input
+        test_error = predict(X_test, self.y_test, self.y_bar, estimates)
+        plot_error(d2, train_error, test_error)
