@@ -2,8 +2,7 @@
 #
 # Changes:
 # - get oob (out of bag) samples for test
-# - Python 2 to 3. use Abstract base class, etc.
-# - add comments
+# - Use Abstract base class, etc.
 
 from abc import ABC, abstractmethod
 
@@ -17,7 +16,7 @@ class Forest(ABC):
 
     def __init__(self, X, Y):
         self.X, self.Y = X, Y
-        self.sampled = set()
+        self.sampled = set()  # index of data points sampled at least once
 
     def predict(self, X, return_tree_predictions=False):
         Ys = [tree.predict(X) for tree in self.trees]

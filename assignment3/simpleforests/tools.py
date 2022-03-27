@@ -6,6 +6,13 @@ def encode_one_of_n(Y):
 
     Returns: A size (n_data, n) numpy matrix of class labels in a one-of-n
     encoding.
+
+    example:
+    # y = np.array([0, 2, 1])
+    # np.equal.outer(y, np.arange(3))
+        array([[ True, False, False],
+               [False, False,  True],
+               [False,  True, False]])
     """
     Y = np.equal.outer(Y, np.arange(Y.max()+1)).astype(np.float)
     assert np.all(Y.sum(axis=1) == 1.)
@@ -50,7 +57,7 @@ def colors_from_predictions(Y_hat, colors):
     """
     y_colors = np.zeros((len(Y_hat),3))
     for yi in range(len(colors)):
-        y_colors[ Y_hat == yi ] = colors[yi]
+        y_colors[Y_hat == yi] = colors[yi]
     return y_colors
 
 

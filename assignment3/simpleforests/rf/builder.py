@@ -2,8 +2,7 @@
 #
 # Changes:
 # - implement _find_split_parameters() method
-# - add comments
-# - Python 2 to 3. use Abstract base class, etc.
+
 
 from abc import ABC, abstractmethod
 
@@ -128,7 +127,7 @@ class ClassificationTreeBuilder(TreeBuilder):
         n_l = y_l.shape[0]
         n_r = y_r.shape[0]
 
-        H = self._entropy(y.mean(axis=0))
+        H = self._entropy(y.mean(axis=0))  # mean is the prob. of each class.
         H_l = self._entropy(y_l.mean(axis=0))
         H_r = self._entropy(y_r.mean(axis=0))
 

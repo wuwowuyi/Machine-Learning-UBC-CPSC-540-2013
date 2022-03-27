@@ -2,7 +2,11 @@
 #
 # Changes:
 # - Load and preprocess data using Pandas
-# - test out of bagging accuracy
+# - test out of bagging accuracy.
+#   Accuracy of the whole data set ranges from 0.96 to 0.98.
+#   The oob accuracy ranges from 0.9 to 1 with 10 trees,
+#   and most of the time 1.0 with 20 trees.
+
 
 import pandas as pd
 
@@ -29,11 +33,13 @@ def load_data():
 def run_test():
     X, y, class_names = load_data()
 
-    forest = rf.ClassificationForest(X, encode_one_of_n(y)).fit(
+    forest = rf.ClassificationForest(X, encode_one_of_n(y))
+    forest.fit(
         n_trees=10,
         max_depth=4,
         n_min_leaf=1,
         n_trials=4)
+
     Yhat = forest.predict(X)
     Yhat = max_of_n_prediction(Yhat)
 

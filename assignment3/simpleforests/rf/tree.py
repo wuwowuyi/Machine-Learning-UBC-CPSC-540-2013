@@ -1,9 +1,3 @@
-# Adapted from course provided builder.py
-#
-# Changes:
-# - Python 2 to 3
-# - add comments
-
 import numpy as np
 
 
@@ -29,10 +23,6 @@ class InternalNode:
         assert right_child is not None
 
     def predict(self, X):
-        """
-        X is the test data.
-        X.shape[0] is the number of test data points.
-        """
         # branch masks
         left_mask = X[:, self.dim] <= self.threshold
         right_mask = np.logical_not(left_mask)
