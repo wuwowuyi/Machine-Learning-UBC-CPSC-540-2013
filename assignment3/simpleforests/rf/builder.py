@@ -58,7 +58,10 @@ class TreeBuilder(ABC):
                 if gain > max_gain:
                     max_gain = gain
                     split = t
-            choices[max_gain] = (dim, split)
+            if max_gain > 0:
+                choices[max_gain] = (dim, split)
+        if len(choices.keys()) == 0:
+            return None
         best_gain = sorted(choices.keys())[-1]
         return choices[best_gain]
 

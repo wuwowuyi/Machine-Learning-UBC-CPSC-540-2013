@@ -14,9 +14,10 @@ from .builder import ClassificationTreeBuilder
 
 class Forest(ABC):
 
-    def __init__(self, X, Y):
+    def __init__(self, X, Y, sample_size=None):
         self.X, self.Y = X, Y
         self.sampled = set()  # index of data points sampled at least once
+        self.sample_size = sample_size if sample_size else X.shape[0]
 
     def predict(self, X, return_tree_predictions=False):
         Ys = [tree.predict(X) for tree in self.trees]
@@ -39,13 +40,16 @@ class Forest(ABC):
         return self
 
     def _bootstrap(self, X, Y):
-        sample = np.random.randint(X.shape[0], size=X.shape[0] // 3)
+        sample = np.random.randint(X.shape[0], size=self.sample_size)
         self.sampled.update(np.unique(sample))
         return X[sample], Y[sample]
 
     def get_oob_samples(self):
         all_samples = set(range(self.X.shape[0]))
-        oob = np.array(list(all_samples - self.sampled))
+        not_sampled = list(all_samples - self.sampled)
+        if len(not_sampled) == 0:
+            return None, None
+        oob = np.array(not_sampled)
         return self.X[oob], self.Y[oob]
 
     @abstractmethod

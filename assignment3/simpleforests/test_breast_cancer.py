@@ -33,7 +33,7 @@ def load_data():
 def run_test():
     X, y, class_names = load_data()
 
-    forest = rf.ClassificationForest(X, encode_one_of_n(y))
+    forest = rf.ClassificationForest(X, encode_one_of_n(y), X.shape[0] // 3)
     forest.fit(
         n_trees=10,
         max_depth=4,
@@ -42,16 +42,17 @@ def run_test():
 
     Yhat = forest.predict(X)
     Yhat = max_of_n_prediction(Yhat)
+    acc = np.mean(y == Yhat)
+    print(f'accuracy is {acc}')
+    assert acc > 0.95
 
     X_oob, Y_oob = forest.get_oob_samples()
-    Y_oob = decode_one_of_n(Y_oob)
-    Y_oob_hat = forest.predict(X_oob)
-    Y_oob_hat = max_of_n_prediction(Y_oob_hat)
-
-    acc = np.mean(y == Yhat)
-    oob_acc = np.mean(Y_oob == Y_oob_hat)
-    print(f'accuracy is {acc}, and oob accuracy is {oob_acc}')
-    assert acc > 0.95
+    if X_oob is not None:
+        Y_oob = decode_one_of_n(Y_oob)
+        Y_oob_hat = forest.predict(X_oob)
+        Y_oob_hat = max_of_n_prediction(Y_oob_hat)
+        oob_acc = np.mean(Y_oob == Y_oob_hat)
+        print(f'oob accuracy is {oob_acc}')
 
 
 if __name__ == "__main__":
