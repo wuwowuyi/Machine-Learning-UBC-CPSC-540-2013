@@ -2,6 +2,7 @@
 #
 # Changes:
 # - implement _find_split_parameters() method
+# - fix a number of errors when used for different datasets.
 
 
 from abc import ABC, abstractmethod
@@ -88,10 +89,11 @@ class TreeBuilder(ABC):
         mask_l = X[:, split_dim] < split_threshold
         mask_r = np.logical_not(mask_l)
 
-        # refuse to make leafs that are too small
-        if np.sum(mask_l) < n_min_leaf or \
-                np.sum(mask_r) < n_min_leaf:
-            raise Exception("Leaf too small")
+        # cause error when n_min_leaf > 1
+        # # refuse to make leafs that are too small
+        # if np.sum(mask_l) < n_min_leaf or \
+        #         np.sum(mask_r) < n_min_leaf:
+        #     raise Exception("Leaf too small")
 
         # otherwise split this node recursively
         left_child = self.fit(

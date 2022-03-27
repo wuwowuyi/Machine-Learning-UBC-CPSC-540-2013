@@ -18,7 +18,7 @@ def load_data():
     # data downloaded from
     # https://archive-beta.ics.uci.edu/ml/datasets/breast+cancer+wisconsin+original
 
-    data = pd.read_csv('data/breast-cancer-wisconsin.data', na_values='?')
+    data = pd.read_csv('data/breast-cancer-wisconsin.data', header=None, na_values='?')
     data.dropna()
     # first column is user id, last is target
     X, y = data.iloc[:, 1:-1], data.iloc[:, -1]

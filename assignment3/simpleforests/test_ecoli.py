@@ -16,7 +16,7 @@ def load_data():
     # data downloaded from
     # https://archive.ics.uci.edu/ml/datasets/ecoli
 
-    data = pd.read_csv('data/ecoli.data', sep='\s+')
+    data = pd.read_csv('data/ecoli.data', header=None, sep='\s+')
     # first column is a Sequence Name that has no predictive value, last is target
     X, y = data.iloc[:, 1:-1], data.iloc[:, -1]
 
