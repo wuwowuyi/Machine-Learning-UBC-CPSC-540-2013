@@ -1,3 +1,8 @@
+# Adapted from course provided test_breast_cancer.py.
+#
+# Changes:
+# - Load and preprocess data using Pandas
+
 import pandas as pd
 import rf
 from tools import *

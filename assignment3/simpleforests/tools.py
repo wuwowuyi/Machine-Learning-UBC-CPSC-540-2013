@@ -55,8 +55,11 @@ def colors_from_predictions(Y_hat, colors):
     Returns: A size (n_data,3) numpy vector y_colors where y_colors[i] is the color
     of the class Y_hat[i]
     """
-    y_colors = np.zeros((len(Y_hat),3))
-    for yi in range(len(colors)):
+    n_colors, color_dim = colors.shape
+    assert n_colors == (np.max(Y_hat) + 1)  # number colors equals number of classes
+
+    y_colors = np.zeros((Y_hat.shape[0], color_dim))
+    for yi in range(n_colors):
         y_colors[Y_hat == yi] = colors[yi]
     return y_colors
 
@@ -74,9 +77,9 @@ def image_from_predictions(Y_hat, Y_probs, colors, shape):
     """
     img_flat = colors_from_predictions(Y_hat, colors)
     # darken colors by probability
-    img_flat = (img_flat.T * Y_probs.T * Y_probs.T).T
+    img_flat *= Y_probs.reshape(-1, 1) ** 2
 
-    img = img_flat.reshape((shape[0],shape[1],3))
+    img = img_flat.reshape((shape[0], shape[1], colors.shape[1]))
     return img
 
 
