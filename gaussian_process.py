@@ -23,7 +23,7 @@ s = 0.00005    # noise variance.
 
 # Sample some input points and noisy versions of the function evaluated at
 # these points.
-X = np.random.uniform(-5, 5, size=(N,1))
+X = np.random.uniform(-5, 5, size=(N, 1))
 y = f(X) + s*np.random.randn(N)
 
 K = kernel(X, X)
@@ -33,14 +33,16 @@ L = np.linalg.cholesky(K + s*np.eye(N))
 Xtest = np.linspace(-5, 5, n).reshape(-1,1)
 
 # compute the mean at our test points.
-# By theorem: mu = kernel(X, Xtest) @ inv(L.T) @ inv(L) @ y
+# By theorem: mu = mu_test + kernel(X, Xtest) @ inv(L.T) @ inv(L) @ y
+# where mu_test is zero
 Lk = np.linalg.solve(L, kernel(X, Xtest))  # Lk= inv(L) @ kernel(X, Xtest)
 mu = np.dot(Lk.T, np.linalg.solve(L, y))  # mu = Lk.T @ (inv(L) @ y)
 
 # compute the variance at our test points.
-# By theorem: s = kernel(Xtest, Xtest) -
+# By theorem: s2 = kernel(Xtest, Xtest) - kernel(X, Xtest) @ inv(L.T) @ inv(L) @ kernel(X, Xtest)
+# where Lk = inv(L) @ kernel(X, Xtest)
 K_ = kernel(Xtest, Xtest)
-s2 = np.diag(K_) - np.sum(Lk**2, axis=0)
+s2 = np.diag(K_) - np.sum(Lk**2, axis=0)  # we care only the variance on the diagonal
 s = np.sqrt(s2)
 
 
@@ -49,10 +51,10 @@ pl.figure(1)
 pl.clf()
 pl.plot(X, y, 'r+', ms=20)
 pl.plot(Xtest, f(Xtest), 'b-')
-pl.gca().fill_between(Xtest.flat, mu-3*s, mu+3*s, color="#dddddd")
+pl.gca().fill_between(Xtest.flat, mu-s, mu+s, color="#dddddd")
 pl.plot(Xtest, mu, 'r--', lw=2)
 pl.savefig('predictive.png', bbox_inches='tight')
-pl.title('Mean predictions plus 3 st.deviations')
+pl.title('Mean predictions plus 1 st.deviations')
 pl.axis([-5, 5, -3, 3])
 
 # draw samples from the prior at our test points.
