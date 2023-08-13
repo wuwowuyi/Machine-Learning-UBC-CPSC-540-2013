@@ -1,14 +1,18 @@
+"""
+Assignment 1 question 1.
+
+Regularized ridge regression.
+
+Run the two unit tests to generate figures requested by the assignment question.
+"""
+
 import unittest
 
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-"""
-Regularized ridge regression.
 
-Run the two unit tests to generate figures requested by the assignment question. 
-"""
 data_file = 'prostate.data'
 
 
@@ -49,7 +53,7 @@ def ridge(X, y, d2):
     """
     n = X.shape[1]
     t = np.linalg.inv(X.T @ X + d2 * np.eye(n))  # t.shape=(n, n)
-    return t @ X.T.dot(y)
+    return t @ (X.T @ y)
 
 
 def train(X, y, k=100):
@@ -97,11 +101,11 @@ def plot_regularization_path(d2, estimates):
         - estimates: best model parameters estimated. shape=(k, n) where n is number of features.
     """
     _, ax = plt.subplots()
-    n = estimates.shape[1]
+    n = estimates.shape[1]  # number of attributes
     for i in range(n):
         ax.plot(10 ** d2, estimates[:, i])
     ax.set_xscale('log')
-    ax.set_xlabel('δ^2')
+    ax.set_xlabel(r'$\delta^2$')
     ax.set_ylabel('θ')
     labels = np.loadtxt(data_file, max_rows=1, dtype=str)
     ax.legend(labels)
@@ -124,7 +128,7 @@ def plot_error(d2, train_error, test_error):
     ax.plot(10 ** d2, test_error, color='green', label='test')
     ax.plot(best, np.min(test_error), 'g^')
     ax.set_xscale('log')
-    ax.set_xlabel(f'$δ^2$ best={best:.4f}')
+    ax.set_xlabel(f'$\delta^2$ best={best:.4f}')
     ax.set_ylabel('$||y - Xθ|_2|/||y||_2$')
     ax.grid(True, linestyle='dashed')
     ax.legend()
