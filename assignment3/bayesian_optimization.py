@@ -12,10 +12,12 @@ class GP(object):
 
     def __init__(self, kernel, sigma, **kwargs):
         """
+        Create a Gaussian prior.
+
         Args:
         - kernel: kernel function
         - sigma: standard deviation of the noise
-        - kwargs: additional parameters to be passed to the kernel
+        - kwargs: additional parameters for kernel function
         """
         self.kernel = kernel
         self.sigma = sigma
@@ -28,7 +30,7 @@ class GP(object):
         """Add training data.
 
         Args:
-        - x_train: training input (n, d) numpy array. n is # data points, d is dimension
+        - x_train: training input (n, d) numpy array. n is # data points, d is #dimension
         - y_train: training targets, (n,) numpy array. n is # data points.
         """
         if x_train is None or y_train is None:
@@ -50,27 +52,30 @@ class GP(object):
         self.y_mean = np.mean(self.y_train)
         self.y_train -= self.y_mean
 
-    def posterior(self, test):
-        """Compute the posterior mean and variance of xtest
+    def posterior(self, x_test):
+        """Compute the posterior mean and variance of x_test
 
         Args:
-        - test: test input (n, d) 2-D numpy array
+        - x_test: test input (n, d) 2-D numpy array
 
         Returns:
-        posterior mean (n, ) and variance (n, n) of function output f(test)
+        - posterior mean (n, ) and variance (n, ) of function output f(test)
         """
         n_train = self.y_train.shape[0]
         K_train = self.kernel(self.x_train, self.x_train, **self.kwargs)  # train variance (n_train, n_train)
-        K_train_test = self.kernel(self.x_train, test, **self.kwargs)  # train and test covariance (n_train, n_test)
-        K_test = self.kernel(test, test, **self.kwargs)  # test variance (n_test, n_test)
+        K_train_test = self.kernel(self.x_train, x_test, **self.kwargs)  # train and test covariance (n_train, n_test)
+        K_test = self.kernel(x_test, x_test, **self.kwargs)  # test variance (n_test, n_test)
         # compute posterior mean mu
+        # mu = k_*.T @ inv(K) @ y when mean(y) is zero. k_* is covariance of x_train and x_test.
+        # Here we compute mu = (inv(L) @ k_*).T @ inv(L) @ y  where K = L @ L.T
         L = np.linalg.cholesky(K_train + self.sigma * np.eye(n_train))  # K = L @ L.T. L.shape=(n_train, n_train)
-        Lk = np.linalg.solve(L, K_train_test)  # Lk= inv(L) @ kernel(x_train, test). Lk.shape=(n_train, n_test)
+        Lk = np.linalg.solve(L, K_train_test)  # Lk= inv(L) @ K_train_test. Lk.shape=(n_train, n_test)
         mu = Lk.T @ np.linalg.solve(L, self.y_train)  # mu = Lk.T @ (inv(L) @ y). mu.shape=(n_test,)
         mu += self.y_mean
         # compute posterior variance
-        v = np.linalg.solve(L, K_train_test)  # v=inv(L) @ kernel(x_train, test). v.shape=(n_train, n_test)
-        variance = K_test - v.T @ v  # variance.shape=(n_test, n_test)
+        # variance = K_test - k_*.T @ inv(K) @ k_*.T = K_test - (inv(L) @ k_*).T @ (inv(L) @ k_*.T)
+        v = np.linalg.solve(L, K_train_test)  # v=inv(L) @ K_train_test. v.shape=(n_train, n_test)
+        variance = np.diag(K_test) - np.diag(v.T @ v)
         return mu, variance
 
     def get_max(self):
@@ -181,7 +186,7 @@ class BayesianOptimizationTest(unittest.TestCase):
         """Test fitting a noisy sin function.
         """
         N = 10
-        sigma = 0.1  # noise variance
+        sigma = 0.01  # noise variance
         x_train, y_train = self._get_train(sigma, N)
         x_test = self._get_test(5*N)
 
@@ -207,12 +212,12 @@ class BayesianOptimizationTest(unittest.TestCase):
         # Plot the posterior distribution and some samples
         _, ax = plt.subplots()
         # Plot the distribution of the function (mean, covariance)
-        ax.plot(x_train, y_train, 'bx', label='$(x_1, y_1)$')  # train data, blue cross
+        ax.plot(x_train, y_train, 'bx', label='train data')  # train data, blue cross
         ax.plot(x_test, self.f_sin(x_test), 'r--', label='$sin(x)$')  # real test, red dashed line
-        ax.plot(x_test, mu, 'k-', label='$\mu_{p}$')  # posterior mean. black solid line
-        sigma2 = np.sqrt(np.diag(variance))  # standard deviation
-        ax.fill_between(x_test.flat, mu - 2 * sigma2, mu + 2 * sigma2, color='gray',
-                         alpha=0.2, label='$2 \sigma_{p}$')  # varaince.
+        ax.plot(x_test, mu, 'k-', label='posterior $\mu$')  # posterior mean. black solid line
+        sigma2 = np.sqrt(variance)  # standard deviation
+        ax.fill_between(x_test.flat, mu - sigma2, mu + sigma2, color='gray',
+                         alpha=0.2, label='posterior $\sigma$')  # standard deviation
         ax.set_title(f'GP fitting a sin function. noise variance {sigma:.2f}')
         ax.legend()
         plt.show()
