@@ -82,7 +82,8 @@ class GP(object):
         mu = Lk.T @ np.linalg.solve(L, y_train)  # mu = Lk.T @ (inv(L) @ y). mu.shape=(n_test,)
         mu += y_mean
         # compute posterior variance
-        # variance = K_test - k_*.T @ inv(K) @ k_*.T = K_test - (inv(L) @ k_*).T @ (inv(L) @ k_*.T)
+        # variance = K_test - k_*.T @ inv(K) @ k_*.T
+        # Here we compute K_test - (inv(L) @ k_*).T @ (inv(L) @ k_*.T)
         v = np.linalg.solve(L, K_train_test)  # v=inv(L) @ K_train_test. v.shape=(n_train, n_test)
         variance = np.diag(K_test) - np.diag(v.T @ v)
         return mu, np.sqrt(variance)
@@ -111,14 +112,14 @@ def sqexp_kernel(x1, x2, ell=1.0, sf2=1.0):
 
 
 def gpei(gp, candidates, xi=0.1):
-    """The EI(Expected Improvement) acquisition function for Bayesian optimization.
+    """The EI(Expected Improvement) acquisition function.
 
     Args:
     - gp: a Gaussian Process instance.
     - candidates: a set of data points
 
     Returns:
-    A vector of index such that the highest index corresponds to the next point to select
+        Next point x to sample, and the function mean and variance.
     """
     y_max = gp.get_max()
     mu, s = gp.posterior(candidates)
@@ -130,14 +131,14 @@ def gpei(gp, candidates, xi=0.1):
 
 
 def gpucb(gp, candidates, t):
-    """The GP-UCB acquisition function for Bayesian optimization.
+    """The GP-UCB acquisition function.
 
     Args:
     - gp: a Gaussian Process instance.
     - candidates: a set of data points
 
     Returns:
-    A vector of index such that the highest index corresponds to the next point to select
+        Next point x to sample, and the function mean and variance.
     """
     mu, s = gp.posterior(candidates)
     d = candidates.shape[1]
@@ -154,7 +155,7 @@ def ts(gp, candidates):
     - candidates: a set of data points
 
     Returns:
-    A vector of index such that the highest index corresponds to the next point to select
+        Next point x to sample, and the function mean and variance.
     """
     mu, s = gp.posterior(candidates)
     samples = mu + s * np.random.randn(candidates.shape[0])
@@ -162,7 +163,7 @@ def ts(gp, candidates):
     return candidates[selected], mu[selected], s[selected]
 
 
-def gpopt(f, gp, acq, **kwargs):
+def gpopt(f, gp, acq, candidates, **kwargs):
     """Bayesian optimization function.
 
     Args:
@@ -173,19 +174,19 @@ def gpopt(f, gp, acq, **kwargs):
     - kwargs: additional parameters for the acquisition function
 
     Returns:
-    A sequence of points the algorithm thinks are optimal at every iteration. the last is the optimum.
+        X points the algorithm samples at each iteration, and corresponding mean and deviation.
     """
     iterations = 30
-    x_range = 7
     selection, mean, sv = [], [], []
     for i in range(iterations):
-        candidates = x_range * np.sort(np.random.rand(50)).reshape(-1, 1)
-        if acq == 'ucb':
+        if acq == 'GP-UCB':
             x, x_mean, x_deviation = gpucb(gp, candidates, t=i+1)
-        elif acq == 'ei':
+        elif acq == 'EI':
             x, x_mean, x_deviation = gpei(gp, candidates, **kwargs)
-        elif acq == 'ts':
+        elif acq == 'Thompson Sampling':
             x, x_mean, x_deviation = ts(gp, candidates)
+        else:
+            raise ValueError('Unknown acquisition function!')
         selection.append(x)
         mean.append(x_mean)
         sv.append(x_deviation)
@@ -210,10 +211,10 @@ class BayesianOptimizationTest(unittest.TestCase):
     def test_fitting(self):
         """Test fitting a noisy sin function.
         """
-        N = 10
-        sigma = 0.01  # noise variance
-        x_train, y_train = self._get_train(sigma, N)
-        x_test = self._get_test(5*N)
+        n = 10
+        sigma = 0.1  # noise variance
+        x_train, y_train = self._get_train(sigma, n)
+        x_test = self._get_test(5*n)
 
         gp = GP(sqexp_kernel, sigma)
         gp.add_data(x_train, y_train)
@@ -222,44 +223,48 @@ class BayesianOptimizationTest(unittest.TestCase):
 
     def test_BayesianOptimization(self):
         n = 3
-        sigma = 0.01  # noise variance
+        sigma = 0.1  # noise variance
         x_train, y_train = self._get_train(sigma, n)
-        gp = GP(sqexp_kernel, sigma)
-        gp.add_data(x_train, y_train)
-
-        #candidates = self._get_test(500)
+        candidates = self._get_test(100)
         noisy_sin = lambda x: self.f_sin(x) + sigma * np.random.randn(x.shape[0])
-        optimals = gpopt(noisy_sin, gp, 'ucb')
-        self._plot_bayesian_optimization(gp, optimals)
 
+        acqs = ['EI', 'GP-UCB', 'Thompson Sampling']
+        gps, experiments = [], []
+        for acq in acqs:
+            gp = GP(sqexp_kernel, sigma)
+            gp.add_data(x_train, y_train)
+            experiment = gpopt(noisy_sin, gp, acq, candidates)
+            gps.append(gp)
+            experiments.append(experiment)
+        self._plot_bayesian_optimization(acqs, gps, experiments)
 
     def _plot_GP_fitting(self, gp, x_test, mu, deviation):
-        # Plot the posterior distribution and some samples
         _, ax = plt.subplots()
-        # Plot the distribution of the function (mean, covariance)
         ax.plot(gp.x_train, gp.y_train, 'bx', label='train data')  # train data, blue cross
         ax.plot(x_test, self.f_sin(x_test), 'r--', label='$sin(x)$')  # real function, red dashed line
         ax.plot(x_test, mu, 'k-', label='mean $\mu$')  # fitted function mean. black solid line
         ax.fill_between(x_test.flat, mu - deviation, mu + deviation, color='gray',
                          alpha=0.2, label='deviation $\sigma$')  # fitted function standard deviation
-        ax.set_title(f'GP fitting a sin function. noise variance {gp.sigma:.2f}')
+        ax.set_title(f'fitting a sin(x). noise variance {gp.sigma:.2f}, #{gp.y_train.shape[0]} train data.')
         ax.legend()
         plt.show()
 
-    def _plot_bayesian_optimization(self, gp, optimals):
-        _, (ax1, ax2) = plt.subplots(nrows=2, ncols=1)
+    def _plot_bayesian_optimization(self, acq, gp, experiments):
+        _, ax = plt.subplots(nrows=3, ncols=2, figsize=[12, 12])
         x = self._get_test(50)
-        ax1.plot(x, self.f_sin(x), 'r--', label='$sin(x)$')  # true f, red dashed line
-        mu, s = gp.posterior(x)
-        ax1.plot(x, mu, 'k-', label='$\mu_{p}$')  # posterior mean. black solid line
-        ax1.fill_between(x.flat, mu - 2 * s, mu + 2 * s, color='gray',
-                        alpha=0.2, label='$2 \sigma_{p}$')  # deviation.
-        tested, mean, sv = optimals
+        for i in range(3):
+            ax[i, 0].plot(x, self.f_sin(x), 'r--', label='$sin(x)$')  # true f, red dashed line
+            mu, s = gp[i].posterior(x)
+            ax[i, 0].plot(x, mu, 'k-', label='$\mu_{p}$')  # posterior mean. black solid line
+            ax[i, 0].fill_between(x.flat, mu - s, mu + s, color='gray',
+                            alpha=0.2, label='$\sigma_{p}$')  # deviation.
+            ax[i, 0].plot(gp[i].x_train, gp[i].y_train, 'bx')  # train data, blue cross
+            ax[i, 0].legend()
+            ax[i, 0].set_title(f'{acq[i]}, noise {gp[i].sigma:.2f}')
 
-        ax1.plot(gp.x_train, gp.y_train, 'bx')  # train data, blue cross
-        #ax1.legend()
-        iterations = len(tested)
-        ax2.errorbar(range(iterations), self.f_sin(tested), sv)
-        ax2.set_xlabel('iteration')
-        ax2.set_ylabel('objective')
+            sampled, mean, sv = experiments[i]
+            ax[i, 1].errorbar(range(len(sampled)), self.f_sin(sampled), sv)
+            ax[i, 1].set_ylabel('objective')
+            ax[i, 1].set_title(f'{acq[i]}')
+        ax[2, 1].set_xlabel('iteration')
         plt.show()
