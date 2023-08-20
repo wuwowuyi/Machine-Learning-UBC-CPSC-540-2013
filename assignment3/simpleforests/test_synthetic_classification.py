@@ -41,7 +41,7 @@ def plot_results(X, Y, forest):
     img = image_from_predictions(Y_hat, max_prob_of_n_prediction(Y_probs), colors, Ux.shape)
     plt.imshow(img, extent=grid_extend, origin='lower')
     plt.scatter(X[:, 0], X[:, 1], c=colors_from_predictions(Y, colors))
-    plt.savefig("synthetic_classification.png")
+    plt.show()
 
     plt.figure()
     for i in range(25):
@@ -50,7 +50,7 @@ def plot_results(X, Y, forest):
         img = image_from_predictions(Y_hat, max_prob_of_n_prediction(Y_probs_per_tree[i]), colors, Ux.shape)
         plt.imshow(img, extent=grid_extend, origin='lower')
 
-    plt.savefig("synthetic_classification_tree_predictions.png")
+    plt.show()
 
 def run_test():
     X, Y = load_data()

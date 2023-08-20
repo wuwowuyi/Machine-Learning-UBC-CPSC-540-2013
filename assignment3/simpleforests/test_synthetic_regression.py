@@ -37,14 +37,14 @@ def plot_results(X, forest):
 
     plt.figure()
     plt.imshow(Y_probs.reshape(Ux.shape), extent=grid_extend, origin='lower')
-    plt.savefig("synthetic_regression.png")
+    plt.show()
 
     plt.figure()
     for i in range(25):
         plt.subplot(5, 5, i+1)
         plt.imshow(Y_probs_per_tree[i].reshape(Ux.shape), extent=grid_extend, origin='lower')
 
-    plt.savefig("synthetic_regression_tree_predictions.png")
+    plt.show()
 
 
 def run_test():
