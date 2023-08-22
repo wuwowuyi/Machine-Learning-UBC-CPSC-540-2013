@@ -10,7 +10,6 @@ import unittest
 
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
 
 
 data_file = 'prostate.data'
@@ -49,10 +48,13 @@ def ridge(X, y, d2):
         - y: train target. y.shape=(m,)
         - d2: ridge regularization strength, is a real number.
     Returns:
-        - optimal theta. shape=(n,)
+        - optimal theta. shape=(n+1,)
     """
-    n = X.shape[1]
-    t = np.linalg.inv(X.T @ X + d2 * np.eye(n))  # t.shape=(n, n)
+    m, n = X.shape
+    X = np.c_[X, np.ones(m)]  # append an all one column for bias
+    reg = d2 * np.eye(n + 1)
+    reg[n, n] = 0  # do not regularize bias
+    t = np.linalg.inv(X.T @ X + reg)
     return t @ (X.T @ y)
 
 
@@ -64,7 +66,7 @@ def train(X, y, k=100):
         - k: number of delta to try
     Returns:
         - d2_candidates: delta tried. d2_candidates.shape=(k,)
-        - estimates: best theta for each delta. shape=(k, n) where n is number of features
+        - estimates: best theta for each delta. shape=(k, n+1) where n is number of features
     """
     d2_candidates = np.sort(np.random.uniform(-1.5, 3.5, k))
     estimates = [ridge(X, y, 10 ** d2) for d2 in d2_candidates]
@@ -76,19 +78,21 @@ def predict(X, y, y_bar, theta):
     Predict target value, and returns the prediction error.
 
     Assume m is the number of input data points, n is the number of features,
-    and k is the number of estimated models using different hyperparameter, i.e, the regularization strength.
+    and k is the number of estimated models using different regularization strength.
 
     Args:
         - X: input data. shape=(m, n)
         - y: true target. shape=(m,)
         - y_bar: mean of training targets.
-        - theta: estimated model parameters. shape=(k, n)
+        - theta: estimated model parameters. shape=(k, n+1)
 
     Returns:
          - prediction error. shape=(k,)
     """
-    predict = theta @ X.T + y_bar  # shape=(k, m)
-    error = np.linalg.norm(predict - y, axis=1) / np.linalg.norm(y)
+    m, _ = X.shape
+    X = np.c_[X, np.ones(m)]
+    y_hat = theta @ X.T + y_bar  # shape=(k, m)
+    error = np.linalg.norm(y_hat - y, axis=1) / np.linalg.norm(y)
     return error
 
 
@@ -101,14 +105,14 @@ def plot_regularization_path(d2, estimates):
         - estimates: best model parameters estimated. shape=(k, n) where n is number of features.
     """
     _, ax = plt.subplots()
-    n = estimates.shape[1]  # number of attributes
+    n = estimates.shape[1] - 1  # number of attributes
     for i in range(n):
         ax.plot(10 ** d2, estimates[:, i])
     ax.set_xscale('log')
     ax.set_xlabel(r'$\delta^2$')
     ax.set_ylabel('θ')
     labels = np.loadtxt(data_file, max_rows=1, dtype=str)
-    ax.legend(labels)
+    ax.legend(labels[:-1])
     ax.grid(True, linestyle='dashed')
     plt.show()
 
@@ -129,7 +133,7 @@ def plot_error(d2, train_error, test_error):
     ax.plot(best, np.min(test_error), 'g^')
     ax.set_xscale('log')
     ax.set_xlabel(f'$\delta^2$ best={best:.4f}')
-    ax.set_ylabel('$||y - Xθ|_2|/||y||_2$')
+    ax.set_ylabel('$||y - Xθ||_2|/||y||_2$')
     ax.grid(True, linestyle='dashed')
     ax.legend()
     plt.show()
