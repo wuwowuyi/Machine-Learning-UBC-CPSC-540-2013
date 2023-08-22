@@ -59,11 +59,12 @@ for _ in range(100):
         A = X.T @ Ci_diag @ X + reg * np.eye(f)
         v = np.dot(X.T, np.dot(Ci_diag, P[:, i]))
         Y[:, i] = np.linalg.solve(A, v)
-print('Alternating Weighted Ridge Regression:')
+print('\nAlternating Weighted Ridge Regression:')
 matches = np.dot(X, Y)
 print(matches)
 
 movies = np.array(['Legally Blond', 'Matrix', 'Bourne Identity', 'You’ve Got Mail',
                    'The Devil Wears Prada', 'The Dark Knight', 'The Lord of the Rings'])
 recommend = movies[np.argmax(matches, axis=1)]  # top movie recommended for each user
+print('\nTop movie recommended for each user: ')
 print(recommend)
