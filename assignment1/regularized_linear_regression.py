@@ -151,9 +151,9 @@ class RegularizedLinearRegressionTest(unittest.TestCase):
     def _normalize(self):
         self.X_bar = np.mean(self.X_train, axis=0)
         self.X_std = np.std(self.X_train, axis=0)
-        self.y_bar = np.mean(self.y_train)  # y_bar subsumes theta_o
+        self.y_bar = np.mean(self.y_train)
         self.X_train -= self.X_bar
-        self.X_train /= self.X_std
+        self.X_train /= self.X_std + 1e-8
 
     def test_plot_regularization_path(self):
         d2, estimates = train(self.X_train, self.y_train - self.y_bar)
